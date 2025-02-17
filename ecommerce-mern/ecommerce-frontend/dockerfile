@@ -1,0 +1,41 @@
+# Step 1: Build the React app
+FROM node:18-alpine AS build
+
+# Set working directory
+WORKDIR /app
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the entire project directory
+COPY . .
+
+# Build the React app for production
+RUN npm run build
+
+# Step 2: Serve the React app with Nginx
+FROM nginx:alpine
+
+# Copy the built React app to the Nginx html directory
+COPY --from=build /app/build /usr/share/nginx/html
+
+# Copy the env.js file from the public directory in your React project
+COPY public/env.js /usr/share/nginx/html/assets/env.js
+
+# Copy the entrypoint script to a suitable location (e.g., /usr/local/bin)
+COPY docker-entrypoint.sh /usr/share/nginx/html/
+
+# Ensure the entrypoint script is executable
+RUN chmod +x /usr/share/nginx/html/docker-entrypoint.sh
+
+# Expose port 80
+EXPOSE 80
+
+# Set the entrypoint to the custom script
+ENTRYPOINT ["/usr/share/nginx/html/docker-entrypoint.sh"]
+
+# Default command to run Nginx
+CMD ["nginx", "-g", "daemon off;"]
